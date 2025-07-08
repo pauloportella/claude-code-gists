@@ -1,0 +1,82 @@
+{
+  "cleanupPeriodDays": 90,
+  "env": {
+    "BASH_DEFAULT_TIMEOUT_MS": "900000",
+    "BASH_MAX_TIMEOUT_MS": "900000"
+  },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Task",
+      "Batch",
+      "Bash",
+      "Glob",
+      "Grep",
+      "LS",
+      "Read",
+      "Write",
+      "TodoRead",
+      "TodoWrite",
+      "Edit",
+      "MultiEdit",
+      "NotebookRead",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/security-audit.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/command-safety-guard.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/task-quality-analyzer.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dependency-checker.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notification-handler.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
