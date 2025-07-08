@@ -133,7 +133,8 @@ class NpmChecker:
                     continue
                 
                 # Skip git dependencies
-                if version_spec.startswith('git') or 'github.com' in version_spec:
+                if (version_spec.startswith(('git:', 'git+ssh:', 'git+http:', 'git+https:', 'github:', 'gitlab:', 'bitbucket:')) or
+                    version_spec.startswith(('https://github.com/', 'https://gitlab.com/', 'https://bitbucket.org/'))):
                     continue
                 
                 # Skip workspace dependencies
