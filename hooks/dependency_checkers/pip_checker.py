@@ -198,6 +198,37 @@ class PipChecker:
             
         dependencies = []
         
+        # Handle single line edits (e.g., "click==8.0.0",) or multiple lines from MultiEdit
+        content = content.strip()
+        # Check if this looks like dependency lines (quotes and version specifiers)
+        lines = content.splitlines()
+        is_deps = all(
+            line.strip().startswith('"') and 
+            any(op in line for op in ['>=', '==', '~=', '<', '>', '!='])
+            for line in lines if line.strip()
+        )
+        
+        if is_deps:
+            dependencies = []
+            # Handle multiple lines (from MultiEdit)
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                # Parse single dependency line
+                match = re.match(r'"([^"]+)"', line)
+                if match:
+                    dep = match.group(1)
+                    # Parse dependency spec
+                    match2 = re.match(r'^([a-zA-Z0-9_.-]+)(?:\[[^\]]+\])?\s*([><=~!]+.*)$', dep)
+                    if match2:
+                        package_name = match2.group(1)
+                        version_spec = match2.group(2)
+                        base_version = PipChecker.parse_version_spec(version_spec)
+                        if base_version:
+                            dependencies.append((package_name, base_version, version_spec, 'unknown'))
+            return dependencies
+        
         try:
             data = tomllib.loads(content)
         except Exception:

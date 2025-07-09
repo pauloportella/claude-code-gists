@@ -59,7 +59,7 @@ Your `~/.claude/settings.json` should include hook configurations like:
         "hooks": [
           {
             "type": "command",
-            "command": "uv run ~/.claude/hooks/command-safety-guard.py"
+            "command": "uv run --no-project ~/.claude/hooks/command-safety-guard.py"
           }
         ]
       }
@@ -70,7 +70,7 @@ Your `~/.claude/settings.json` should include hook configurations like:
         "hooks": [
           {
             "type": "command",
-            "command": "uv run ~/.claude/hooks/dependency-checker.py"
+            "command": "uv run --no-project ~/.claude/hooks/dependency-checker.py"
           }
         ]
       }
@@ -79,7 +79,10 @@ Your `~/.claude/settings.json` should include hook configurations like:
 }
 ```
 
-**Note**: Using `uv run` is recommended to ensure Python 3.11+ is used, which is required for `tomllib` support in the Python dependency checker.
+**Note**: Using `uv run --no-project` is recommended to:
+- Ensure Python 3.11+ is used (required for `tomllib` support)
+- Prevent conflicts with your project's dependencies
+- Avoid build errors from outdated dependencies interfering with hook execution
 
 ## Hook Details
 
