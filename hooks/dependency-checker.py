@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#     "tomli>=2.2.1; python_version < '3.11'",
+# ]
+# ///
 """
 Universal Dependency Checker Hook - Verifies dependencies are up to date
-Currently supports: Cargo.toml, package.json
-Future support: requirements.txt, go.mod, pyproject.toml
+Currently supports: Cargo.toml, package.json, requirements.txt, pyproject.toml, Python scripts with inline metadata
+Future support: go.mod
 """
 
 import json
@@ -10,15 +15,28 @@ import sys
 import os
 
 # Add the hooks directory to Python path so we can import from dependency_checkers
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+hooks_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, hooks_dir)
 
 # Import checkers from the modular structure
-from dependency_checkers import CargoChecker, NpmChecker
+try:
+    from dependency_checkers import CargoChecker, NpmChecker, PipChecker
+except ImportError:
+    # If running from symlink, try to import using the full path
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("dependency_checkers", os.path.join(hooks_dir, "dependency_checkers", "__init__.py"))
+    dependency_checkers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dependency_checkers)
+    
+    CargoChecker = dependency_checkers.CargoChecker
+    NpmChecker = dependency_checkers.NpmChecker
+    PipChecker = dependency_checkers.PipChecker
 
 # Registry of all checkers
 CHECKERS = [
     CargoChecker(),
     NpmChecker(),
+    PipChecker(),
 ]
 
 def get_checker(file_path):
@@ -51,8 +69,14 @@ def format_outdated_report(file_path, outdated_deps):
         if file_path.endswith('package.json'):
             # For npm, use the colon format
             update_format = f"{dep['name']}: \"{dep['latest']}\""
+        elif file_path.endswith('requirements.txt'):
+            # For requirements.txt, use == format
+            update_format = f"{dep['name']}=={dep['latest']}"
+        elif file_path.endswith('.py'):
+            # For inline scripts, show the package with version
+            update_format = f"{dep['name']}>={dep['latest']}"
         else:
-            # For Cargo.toml, use the equals format
+            # For Cargo.toml and pyproject.toml, use the equals format
             update_format = f"{dep['name']} = \"{dep['latest']}\""
         
         if dep['is_major']:

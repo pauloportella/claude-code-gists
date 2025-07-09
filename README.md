@@ -12,9 +12,12 @@ A collection of personal hooks for Claude Code. These are my personal Claude Cod
 
 ### Post-Tool Use Hooks
 
-- **dependency-checker.py** - Checks for outdated dependencies in `package.json` and `Cargo.toml` files
+- **dependency-checker.py** - Checks for outdated dependencies in `package.json`, `Cargo.toml`, `requirements.txt`, `pyproject.toml`, and Python scripts
   - Supports npm packages with version range parsing
   - Supports Rust crates with cargo integration
+  - Supports Python packages in requirements.txt and pyproject.toml
+  - Supports PEP 723 inline script metadata in .py files
+  - Uses uv if available for faster Python dependency resolution
   - Blocks writes with outdated dependencies
 
 ### Notification Hooks
@@ -56,7 +59,7 @@ Your `~/.claude/settings.json` should include hook configurations like:
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/command-safety-guard.py"
+            "command": "uv run ~/.claude/hooks/command-safety-guard.py"
           }
         ]
       }
@@ -67,7 +70,7 @@ Your `~/.claude/settings.json` should include hook configurations like:
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/dependency-checker.py"
+            "command": "uv run ~/.claude/hooks/dependency-checker.py"
           }
         ]
       }
@@ -75,6 +78,8 @@ Your `~/.claude/settings.json` should include hook configurations like:
   }
 }
 ```
+
+**Note**: Using `uv run` is recommended to ensure Python 3.11+ is used, which is required for `tomllib` support in the Python dependency checker.
 
 ## Hook Details
 
@@ -90,12 +95,17 @@ Blocks dangerous bash commands including:
 Checks dependencies in:
 - `package.json` - npm packages (dependencies, devDependencies, peerDependencies)
 - `Cargo.toml` - Rust crates
+- `requirements.txt` - Python packages with version specifiers
+- `pyproject.toml` - Modern Python projects (project.dependencies and optional-dependencies)
+- Python scripts (`.py`) - PEP 723 inline script metadata
 
 Features:
 - Detects outdated dependencies
 - Shows current vs latest versions
 - Warns about major version changes
-- Provides package registry URLs
+- Provides package registry URLs (npm, crates.io, PyPI)
+- Uses uv for faster Python dependency resolution when available
+- Handles various version specifiers (==, >=, ~=, etc.)
 
 ### security-audit.py
 Audits file operations for:

@@ -14,7 +14,7 @@ This repository contains a collection of Python-based hooks for Claude Code that
 
 2. **Modular Checkers** (`hooks/dependency_checkers/` module):
    - Dependency checking is modularized with a base interface
-   - Each package manager (npm, cargo) has its own checker class
+   - Each package manager (npm, cargo, pip) has its own checker class
    - Checkers are imported by the main `dependency-checker.py` script
 
 3. **Hook Types**:
@@ -35,9 +35,14 @@ chmod +x hooks/*.py
 
 ### Adding New Dependency Checkers
 New dependency checkers should be added to `hooks/dependency_checkers/` following the existing pattern:
-1. Create a new file (e.g., `pip_checker.py`)
-2. Implement the checker interface with methods: `can_handle()`, `check_file()`, `get_file_patterns()`
+1. Create a new file (e.g., `go_checker.py`)
+2. Implement the checker interface with methods: `can_handle()`, `check_dependencies()`, `extract_dependencies()`, `get_latest_version()`
 3. Import and register in `dependency-checker.py`
+
+Current checkers support:
+- `npm_checker.py`: package.json files
+- `cargo_checker.py`: Cargo.toml files  
+- `pip_checker.py`: requirements.txt, pyproject.toml, and .py files with PEP 723 inline metadata
 
 ## Hook Input/Output Protocol
 
@@ -60,7 +65,14 @@ Hooks output:
 ## Key Implementation Details
 
 1. **Path Safety**: All file path checks use absolute paths
-2. **Version Parsing**: NPM version ranges are properly parsed (^, ~, >=, etc.)
-3. **Registry Integration**: Dependency checkers fetch latest versions from official registries
+2. **Version Parsing**: Package version ranges are properly parsed:
+   - NPM: ^, ~, >=, etc.
+   - Python: ==, >=, ~=, !=, <, >
+   - Rust: Semantic versioning
+3. **Registry Integration**: Dependency checkers fetch latest versions from official registries:
+   - npm registry for Node.js packages
+   - crates.io for Rust packages
+   - PyPI for Python packages (using uv or pip)
 4. **Pattern Matching**: Command safety uses regex patterns with careful boundary checks
 5. **Modularity**: Dependency checkers use dynamic imports to support easy extension
+6. **Python Support**: Handles requirements.txt, pyproject.toml, and PEP 723 inline script metadata
