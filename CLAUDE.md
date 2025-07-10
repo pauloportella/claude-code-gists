@@ -22,15 +22,80 @@ This repository contains a collection of Python-based hooks for Claude Code that
    - **PostToolUse**: Checks results after operations complete
    - **Notification**: Handles system notifications
 
+## Available Hooks
+
+### Pre-Tool Use Hooks
+- **command-safety-guard.py**: Validates bash commands and blocks dangerous operations (rm -rf /, chmod 777, etc.)
+- **security-audit.py**: Audits file operations for security concerns and path traversal attempts  
+- **task-quality-analyzer.py**: Analyzes task descriptions for clarity and completeness
+
+### Post-Tool Use Hooks
+- **dependency-checker.py**: Checks for outdated dependencies in package.json, Cargo.toml, requirements.txt, pyproject.toml, and Python scripts with PEP 723 inline metadata
+
+### Notification Hooks
+- **notification-handler.sh**: Handles system notifications for Claude Code events
+
 ## Development Commands
 
 ### Testing Hooks
 ```bash
-# Test a hook with sample input
+# Test individual hooks with sample input
 echo '{"tool": "Bash", "params": {"command": "rm -rf /"}}' | python3 hooks/command-safety-guard.py
+echo '{"tool": "Edit", "params": {"file_path": "/path/to/package.json", "content": "..."}}' | python3 hooks/dependency-checker.py
 
-# Make hook executable
+# Test all hooks
+python3 hooks/command-safety-guard.py < test_input.json
+python3 hooks/dependency-checker.py < test_input.json
+python3 hooks/security-audit.py < test_input.json
+python3 hooks/task-quality-analyzer.py < test_input.json
+
+# Make hooks executable
 chmod +x hooks/*.py
+```
+
+### Installation and Configuration
+```bash
+# Create symlinks to Claude Code hooks directory
+ln -sf /path/to/claude-code-gists/hooks/command-safety-guard.py ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/dependency-checker.py ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/security-audit.py ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/task-quality-analyzer.py ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/notification-handler.sh ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/dependency_checkers ~/.claude/hooks/
+```
+
+Reference configuration for `~/.claude/settings.json`:
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": "~/.claude/hooks/security-audit.py"}]
+      },
+      {
+        "matcher": "Bash", 
+        "hooks": [{"type": "command", "command": "~/.claude/hooks/command-safety-guard.py"}]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [{"type": "command", "command": "~/.claude/hooks/task-quality-analyzer.py"}]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{"type": "command", "command": "~/.claude/hooks/dependency-checker.py"}]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "~/.claude/hooks/notification-handler.sh"}]
+      }
+    ]
+  }
+}
 ```
 
 ### Adding New Dependency Checkers
@@ -40,8 +105,8 @@ New dependency checkers should be added to `hooks/dependency_checkers/` followin
 3. Import and register in `dependency-checker.py`
 
 Current checkers support:
-- `npm_checker.py`: package.json files
-- `cargo_checker.py`: Cargo.toml files  
+- `npm_checker.py`: package.json files (dependencies, devDependencies, peerDependencies)
+- `cargo_checker.py`: Cargo.toml files
 - `pip_checker.py`: requirements.txt, pyproject.toml, and .py files with PEP 723 inline metadata
 
 ## Hook Input/Output Protocol
@@ -76,3 +141,41 @@ Hooks output:
 4. **Pattern Matching**: Command safety uses regex patterns with careful boundary checks
 5. **Modularity**: Dependency checkers use dynamic imports to support easy extension
 6. **Python Support**: Handles requirements.txt, pyproject.toml, and PEP 723 inline script metadata
+
+## Requirements and Best Practices
+
+### Python Environment
+- **Python 3.11+** required for `tomllib` support in dependency checkers
+- **uv** recommended for faster Python dependency resolution
+- Use `uv run --no-project` to avoid conflicts with project dependencies
+
+### Hook Configuration Recommendations
+- Use `uv run --no-project ~/.claude/hooks/script.py` in settings.json for Python hooks
+- This ensures Python 3.11+ usage and prevents dependency conflicts
+- Prevents build errors from outdated project dependencies interfering with hook execution
+
+### Security Considerations
+- Command safety guard blocks system-destructive operations
+- Security audit validates file operations and path traversal attempts
+- All hooks use absolute paths to prevent path-based attacks
+- Hook outputs include package registry URLs for verification
+
+## Git Commit Message Conventions
+
+Follow these commit message patterns used in this repository:
+
+- **Add**: For new features, functionality, or files
+  - `Add Python dependency checking support`
+  - `Add CLAUDE.md with hook architecture documentation`
+
+- **Fix**: For bug fixes and vulnerability patches
+  - `Fix incomplete URL substring sanitization vulnerability in npm_checker.py`
+
+- **Improve**: For enhancements to existing features
+  - `Improve pip checker single line dependency parsing and uv run usage`
+
+### Guidelines
+- Use imperative mood (Add, Fix, Improve, not Added, Fixed, Improved)
+- Be specific about what was changed
+- Include file names for targeted fixes
+- Keep messages concise but descriptive
