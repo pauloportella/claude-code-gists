@@ -76,6 +76,15 @@ Your `~/.claude/settings.json` should include hook configurations like:
             "command": "uv run --no-project ~/.claude/hooks/command-safety-guard.py"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project ~/.claude/hooks/task-quality-analyzer.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -85,6 +94,16 @@ Your `~/.claude/settings.json` should include hook configurations like:
           {
             "type": "command",
             "command": "uv run --no-project ~/.claude/hooks/dependency-checker.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project ~/.claude/hooks/user-prompt-hook.py"
           }
         ]
       }
@@ -131,10 +150,37 @@ Audits file operations for:
 - Path traversal attempts
 
 ### task-quality-analyzer.py
-Ensures high-quality task descriptions by checking for:
-- Clear objectives
-- Specific requirements
-- Measurable outcomes
+Analyzes task descriptions using Claude Sonnet to ensure quality:
+- Validates task clarity and completeness
+- Blocks vague or poorly defined tasks
+- Provides specific improvement suggestions
+- Uses isolated Claude sessions via ~/.claude/hooks-using-claude
+- Prevents task analysis from polluting project conversation history
+
+Features:
+- AI-powered task quality analysis
+- Blocks tasks with unclear scope or deliverables
+- Suggests specific improvements for rejected tasks
+- Allows tasks that meet quality standards
+- Falls back to allowing tasks if analysis fails
+
+### user-prompt-hook.py
+Enhances user prompts for clarity and precision using Claude:
+- **improv: prefix** - Uses Sonnet model for comprehensive prompt engineering
+- **Normal prompts** - Uses Haiku model for quick improvements
+- Includes conversation context from transcript for intelligent enhancements
+- Adds enhanced prompts as context (preserves original)
+- Logs all interactions to ~/.claude/hooks-using-claude/prompt_history.json
+
+Features:
+- Context-aware prompt enhancement using conversation history
+- Advanced prompt engineering for code-related tasks:
+  - Adds file paths and technical specifications
+  - Requests error messages and logs for debugging
+  - Specifies output formats and requirements
+- Prevents recursion with internal enhancement detection
+- Maintains complete history for evaluation
+- Uses isolated Claude sessions to avoid session pollution
 
 ## Contributing
 
