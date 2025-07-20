@@ -191,14 +191,6 @@ def main():
     try:
         # Read hook input from stdin
         raw_input = sys.stdin.read()
-        
-        # Debug: Save the actual payload format
-        if DEBUG:
-            debug_file = os.path.expanduser('~/.claude/hooks-using-claude/debug_payload.json')
-            with open(debug_file, 'w') as f:
-                f.write(raw_input)
-            print(f"Saved payload to {debug_file}", file=sys.stderr)
-        
         data = json.loads(raw_input)
         user_prompt = data.get('prompt', '').strip()
         transcript_path = data.get('transcript_path', '')
@@ -224,7 +216,7 @@ def main():
         
         # Skip enhancement if this looks like our own enhancement prompt to prevent recursion
         if "Improve this user prompt by removing ambiguity" in clean_prompt:
-            save_prompt_history(user_prompt, user_prompt, "skipped_recursion", has_improv_prefix)
+            # Don't log recursion attempts - just exit silently
             print(json.dumps({}))
             return
         
