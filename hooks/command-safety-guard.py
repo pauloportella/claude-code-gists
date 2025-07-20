@@ -65,8 +65,6 @@ SYSTEM_SAFETY_RULES = [
      "🚫 DOCKER WIPE: This would delete all Docker data including volumes!"),
     
     # Search command restrictions
-    (r'\bgrep\b(?!.*\|)', 
-     "🚫 Use 'rg' (ripgrep) instead of 'grep' for better performance and features"),
     (r'\bfind\s+\S+\s+-name\b', 
      "🚫 Use 'rg --files -g pattern' or 'rg --files | rg pattern' instead of 'find -name' for better performance"),
 ]

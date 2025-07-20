@@ -2,6 +2,11 @@
 """
 Task quality analyzer - ensures well-defined task delegation
 Uses Claude to analyze task clarity, scope, and safety
+
+IMPORTANT: This hook uses ~/.claude/hooks-using-claude as the working directory
+when calling Claude internally. This isolation prevents hook analysis conversations
+from polluting your main project session history. The --add-dir parameter ensures
+Claude still has access to your project files while keeping hook operations separate.
 """
 
 import json
@@ -41,10 +46,15 @@ def analyze_with_claude(description, prompt):
     )
     
     try:
-        # Run claude in pipe mode with timeout
+        # Save current directory and change to hooks isolation directory
+        original_cwd = os.getcwd()
+        hooks_claude_dir = os.path.expanduser('~/.claude/hooks-using-claude')
+        os.chdir(hooks_claude_dir)
+        
+        # Run claude in pipe mode with timeout, isolated from project sessions
         claude_path = os.path.expanduser('~/.claude/local/claude')
         result = subprocess.run(
-            [claude_path, '-p', '--model', 'claude-sonnet-4-20250514'],
+            [claude_path, '-p', '--model', 'sonnet', '--add-dir', original_cwd],
             input=analysis_prompt,
             capture_output=True,
             text=True,
@@ -89,6 +99,12 @@ def analyze_with_claude(description, prompt):
     except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
         # If analysis fails, err on the side of allowing the task
         return None
+    finally:
+        # Always restore original working directory
+        try:
+            os.chdir(original_cwd)
+        except:
+            pass
 
 def main():
     try:

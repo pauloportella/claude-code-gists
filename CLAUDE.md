@@ -32,6 +32,13 @@ This repository contains a collection of Python-based hooks for Claude Code that
 ### Post-Tool Use Hooks
 - **dependency-checker.py**: Checks for outdated dependencies in package.json, Cargo.toml, requirements.txt, pyproject.toml, and Python scripts with PEP 723 inline metadata
 
+### User Prompt Submit Hooks
+- **user-prompt-hook.py**: Enhances user prompts for clarity and precision
+  - `improv:` prefix → Sonnet model for advanced prompt engineering
+  - Normal prompts → Haiku model for quick improvements
+  - Completely replaces original prompts with enhanced versions
+  - Logs enhancement history to `~/.claude/hooks-using-claude/prompt_history.json`
+
 ### Notification Hooks
 - **notification-handler.sh**: Handles system notifications for Claude Code events
 
@@ -42,12 +49,15 @@ This repository contains a collection of Python-based hooks for Claude Code that
 # Test individual hooks with sample input
 echo '{"tool": "Bash", "params": {"command": "rm -rf /"}}' | python3 hooks/command-safety-guard.py
 echo '{"tool": "Edit", "params": {"file_path": "/path/to/package.json", "content": "..."}}' | python3 hooks/dependency-checker.py
+echo '{"user_prompt": "improv: fix the bug"}' | python3 hooks/user-prompt-hook.py
+echo '{"user_prompt": "make this faster"}' | python3 hooks/user-prompt-hook.py
 
 # Test all hooks
 python3 hooks/command-safety-guard.py < test_input.json
 python3 hooks/dependency-checker.py < test_input.json
 python3 hooks/security-audit.py < test_input.json
 python3 hooks/task-quality-analyzer.py < test_input.json
+python3 hooks/user-prompt-hook.py < test_input.json
 
 # Make hooks executable
 chmod +x hooks/*.py
@@ -60,8 +70,12 @@ ln -sf /path/to/claude-code-gists/hooks/command-safety-guard.py ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/dependency-checker.py ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/security-audit.py ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/task-quality-analyzer.py ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/user-prompt-hook.py ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/notification-handler.sh ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/dependency_checkers ~/.claude/hooks/
+
+# Create isolated directory for hook Claude sessions
+mkdir -p ~/.claude/hooks-using-claude
 ```
 
 Reference configuration for `~/.claude/settings.json`:
@@ -86,6 +100,12 @@ Reference configuration for `~/.claude/settings.json`:
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [{"type": "command", "command": "~/.claude/hooks/dependency-checker.py"}]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [{"type": "command", "command": "~/.claude/hooks/user-prompt-hook.py"}]
       }
     ],
     "Notification": [
@@ -130,17 +150,22 @@ Hooks output:
 ## Key Implementation Details
 
 1. **Path Safety**: All file path checks use absolute paths
-2. **Version Parsing**: Package version ranges are properly parsed:
+2. **Claude Session Isolation**: Hooks use dedicated `~/.claude/hooks-using-claude` directory
+   - Prevents hook analysis from polluting project session history
+   - Uses `--add-dir` to maintain project file access
+   - Pattern: `cd ~/.claude/hooks-using-claude && claude --add-dir <original_pwd>`
+3. **Version Parsing**: Package version ranges are properly parsed:
    - NPM: ^, ~, >=, etc.
    - Python: ==, >=, ~=, !=, <, >
    - Rust: Semantic versioning
-3. **Registry Integration**: Dependency checkers fetch latest versions from official registries:
+4. **Registry Integration**: Dependency checkers fetch latest versions from official registries:
    - npm registry for Node.js packages
    - crates.io for Rust packages
    - PyPI for Python packages (using uv or pip)
-4. **Pattern Matching**: Command safety uses regex patterns with careful boundary checks
-5. **Modularity**: Dependency checkers use dynamic imports to support easy extension
-6. **Python Support**: Handles requirements.txt, pyproject.toml, and PEP 723 inline script metadata
+5. **Pattern Matching**: Command safety uses regex patterns with careful boundary checks
+6. **Modularity**: Dependency checkers use dynamic imports to support easy extension
+7. **Python Support**: Handles requirements.txt, pyproject.toml, and PEP 723 inline script metadata
+8. **Prompt Enhancement**: UserPromptSubmit hook completely replaces user prompts with enhanced versions
 
 ## Requirements and Best Practices
 

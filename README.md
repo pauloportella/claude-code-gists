@@ -20,6 +20,15 @@ A collection of personal hooks for Claude Code. These are my personal Claude Cod
   - Uses uv if available for faster Python dependency resolution
   - Blocks writes with outdated dependencies
 
+### User Prompt Submit Hooks
+
+- **user-prompt-hook.py** - Enhances user prompts for clarity and precision
+  - `improv:` prefix → Sonnet model for advanced prompt engineering with context analysis
+  - Normal prompts → Haiku model for quick improvements
+  - Adds enhanced prompts as context (doesn't replace original)
+  - Includes conversation history for context-aware enhancements
+  - Logs all interactions to `~/.claude/hooks-using-claude/prompt_history.json`
+
 ### Notification Hooks
 
 - **notification-handler.sh** - Handles system notifications for Claude Code events
@@ -39,9 +48,14 @@ ln -sf /path/to/claude-code-gists/hooks/dependency-checker.py ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/notification-handler.sh ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/security-audit.py ~/.claude/hooks/
 ln -sf /path/to/claude-code-gists/hooks/task-quality-analyzer.py ~/.claude/hooks/
+ln -sf /path/to/claude-code-gists/hooks/user-prompt-hook.py ~/.claude/hooks/
 
 # Dependency checkers module
 ln -sf /path/to/claude-code-gists/hooks/dependency_checkers ~/.claude/hooks/
+
+# Create isolated directory for hook Claude sessions
+# This prevents hook analysis from polluting your project conversation history
+mkdir -p ~/.claude/hooks-using-claude
 ```
 
 3. Configure your `~/.claude/settings.json` file (see `examples/settings.json` for reference)
