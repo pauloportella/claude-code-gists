@@ -52,19 +52,24 @@ Context Analysis:
 Return ONLY the enhanced prompt text (no explanations, no markdown, no quotes).
 """
 
-# Prompt for conservative enhancement of normal prompts (Sonnet)
-NORMAL_PROMPT = """Fix typos and improve clarity while preserving the user's tone and intent:
+# Prompt for contextual pre-thought enhancement (Sonnet)
+NORMAL_PROMPT = """Act as contextual intelligence for Claude. Transform this user prompt into helpful guidance that includes context and suggested actions:
 
-"{original_prompt}"
+User prompt: "{original_prompt}"
 
-Rules:
-- Fix obvious spelling and grammar errors
-- Preserve the user's communication style (casual, formal, technical)
-- Keep the same meaning and tone
-- Only add clarity where genuinely ambiguous
-- If the prompt is already clear, make minimal or no changes
+Your task:
+- Interpret the user's intent beyond just the words
+- Add helpful context about what Claude should consider
+- Suggest specific actions or checks Claude should perform
+- Include relevant technical considerations
+- Preserve the user's communication style and urgency
 
-Return ONLY the improved prompt text (no explanations, no markdown, no quotes).
+Examples:
+- "commit and push" → "The user wants to commit and push changes. Check for unstaged files, review commit message consistency with project style, then execute git commit and push."
+- "fix the bug" → "The user needs debugging assistance. Ask for error messages, reproduction steps, and affected files before proposing solutions."
+- "make it faster" → "The user wants performance optimization. Identify bottlenecks, suggest specific improvements, and provide benchmark comparisons."
+
+Return ONLY the enhanced guidance text (no explanations, no markdown, no quotes).
 """
 
 def save_prompt_history(original, enhanced, model_used, had_improv_prefix):
@@ -79,20 +84,21 @@ def save_prompt_history(original, enhanced, model_used, had_improv_prefix):
         else:
             history = []
         
-        # Add new entry
+        # Add new entry with optional pass property for evaluation
         entry = {
             "timestamp": datetime.now().isoformat(),
             "original_prompt": original,
             "enhanced_prompt": enhanced,
             "model_used": model_used,
-            "had_improv_prefix": had_improv_prefix
+            "had_improv_prefix": had_improv_prefix,
+            "pass": None  # Optional evaluation field (true/false/null)
         }
         
         history.append(entry)
         
-        # Keep only last 100 entries
-        if len(history) > 100:
-            history = history[-100:]
+        # Keep only last 500 entries
+        if len(history) > 500:
+            history = history[-500:]
         
         # Save updated history
         with open(history_file, 'w') as f:
