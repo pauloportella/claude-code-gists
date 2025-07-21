@@ -52,13 +52,19 @@ Context Analysis:
 Return ONLY the enhanced prompt text (no explanations, no markdown, no quotes).
 """
 
-# Prompt for quick enhancement of normal prompts (Haiku)
-NORMAL_PROMPT = """Improve this user prompt by removing ambiguity and making it more precise:
+# Prompt for conservative enhancement of normal prompts (Sonnet)
+NORMAL_PROMPT = """Fix typos and improve clarity while preserving the user's tone and intent:
 
 "{original_prompt}"
 
-Make it clearer and more specific while keeping the same intent. Remove filler words.
-Return ONLY the enhanced prompt text (no explanations, no markdown, no quotes).
+Rules:
+- Fix obvious spelling and grammar errors
+- Preserve the user's communication style (casual, formal, technical)
+- Keep the same meaning and tone
+- Only add clarity where genuinely ambiguous
+- If the prompt is already clear, make minimal or no changes
+
+Return ONLY the improved prompt text (no explanations, no markdown, no quotes).
 """
 
 def save_prompt_history(original, enhanced, model_used, had_improv_prefix):
@@ -131,12 +137,12 @@ def enhance_with_claude(original_prompt, use_improv=False, conversation_context=
     """Use Claude to enhance the user prompt"""
     # Determine model and prompt based on prefix
     if use_improv:
-        model = 'sonnet'
+        model = 'claude-3-5-sonnet-20241022'
         enhancement_prompt = IMPROV_PROMPT.format(original_prompt=original_prompt.replace('"', '\\"'))
         if conversation_context:
             enhancement_prompt += f"\n\nConversation context:\n{conversation_context}"
     else:
-        model = 'claude-3-5-haiku-20241022'
+        model = 'claude-3-5-sonnet-20241022'
         enhancement_prompt = NORMAL_PROMPT.format(original_prompt=original_prompt.replace('"', '\\"'))
         if conversation_context:
             enhancement_prompt += f"\n\nConversation context:\n{conversation_context}"
@@ -215,10 +221,21 @@ def main():
             return
         
         # Skip enhancement if this looks like our own enhancement prompt to prevent recursion
-        if "Improve this user prompt by removing ambiguity" in clean_prompt:
-            # Don't log recursion attempts - just exit silently
-            print(json.dumps({}))
-            return
+        recursion_patterns = [
+            "Improve this user prompt by removing ambiguity",
+            "You are an expert prompt engineer",
+            "Apply Anthropic's prompt engineering best practices", 
+            "Return ONLY the enhanced prompt text",
+            "Original prompt:",
+            "Your task:",
+            "Fix typos and improve clarity while preserving",
+            "Return ONLY the improved prompt text"
+        ]
+        
+        for pattern in recursion_patterns:
+            if pattern in clean_prompt:
+                # Don't log recursion attempts - just exit silently
+                return
         
         # Get conversation context for better enhancement
         conversation_context = get_conversation_context(transcript_path)
@@ -228,14 +245,14 @@ def main():
         
         if enhanced_prompt and enhanced_prompt != clean_prompt:
             # Save to history with enhancement
-            model_used = 'sonnet' if has_improv_prefix else 'haiku'
+            model_used = 'sonnet_improv' if has_improv_prefix else 'sonnet'
             save_prompt_history(user_prompt, enhanced_prompt, model_used, has_improv_prefix)
             
             # Add enhanced prompt as context instead of replacement
             print(f"\n[ENHANCED PROMPT]: {enhanced_prompt}")
         else:
             # Log even when no enhancement was made
-            model_used = 'sonnet' if has_improv_prefix else 'haiku'
+            model_used = 'sonnet_improv' if has_improv_prefix else 'sonnet'
             final_prompt = enhanced_prompt if enhanced_prompt else clean_prompt
             save_prompt_history(user_prompt, final_prompt, f"{model_used}_no_change", has_improv_prefix)
             
