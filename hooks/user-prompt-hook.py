@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-User prompt enhancement hook - improves clarity and removes ambiguity
-Uses Claude to enhance user prompts before processing
+User prompt enhancement hook - ONLY processes prompts with "improv:" prefix
+Uses Claude Sonnet v4 to enhance prompts with advanced prompt engineering
+Normal prompts bypass enhancement to avoid lag
 Saves enhancement history for evaluation
 
 IMPORTANT: This hook uses ~/.claude/hooks-using-claude as the working directory
@@ -52,25 +53,6 @@ Context Analysis:
 Return ONLY the enhanced prompt text (no explanations, no markdown, no quotes).
 """
 
-# Prompt for contextual pre-thought enhancement (Sonnet)
-NORMAL_PROMPT = """Act as contextual intelligence for Claude. Transform this user prompt into helpful guidance that includes context and suggested actions:
-
-User prompt: "{original_prompt}"
-
-Your task:
-- Interpret the user's intent beyond just the words
-- Add helpful context about what Claude should consider
-- Suggest specific actions or checks Claude should perform
-- Include relevant technical considerations
-- Preserve the user's communication style and urgency
-
-Examples:
-- "commit and push" → "The user wants to commit and push changes. Check for unstaged files, review commit message consistency with project style, then execute git commit and push."
-- "fix the bug" → "The user needs debugging assistance. Ask for error messages, reproduction steps, and affected files before proposing solutions."
-- "make it faster" → "The user wants performance optimization. Identify bottlenecks, suggest specific improvements, and provide benchmark comparisons."
-
-Return ONLY the enhanced guidance text (no explanations, no markdown, no quotes).
-"""
 
 def save_prompt_history(original, enhanced, model_used, had_improv_prefix):
     """Save prompt enhancement history to JSON file"""
@@ -139,19 +121,14 @@ def get_conversation_context(transcript_path, num_messages=3):
     except Exception as e:
         return f"Error reading conversation context: {e}"
 
-def enhance_with_claude(original_prompt, use_improv=False, conversation_context=""):
-    """Use Claude to enhance the user prompt"""
-    # Determine model and prompt based on prefix
-    if use_improv:
-        model = 'claude-3-5-sonnet-20241022'
-        enhancement_prompt = IMPROV_PROMPT.format(original_prompt=original_prompt.replace('"', '\\"'))
-        if conversation_context:
-            enhancement_prompt += f"\n\nConversation context:\n{conversation_context}"
-    else:
-        model = 'claude-3-5-sonnet-20241022'
-        enhancement_prompt = NORMAL_PROMPT.format(original_prompt=original_prompt.replace('"', '\\"'))
-        if conversation_context:
-            enhancement_prompt += f"\n\nConversation context:\n{conversation_context}"
+def enhance_with_claude(original_prompt, conversation_context=""):
+    """Use Claude Sonnet v4 to enhance the user prompt with advanced prompt engineering"""
+    model = 'sonnet'  # This is Sonnet v4
+    
+    # Build the system prompt with enhancement instructions
+    system_prompt = IMPROV_PROMPT.format(original_prompt=original_prompt.replace('"', '\\"'))
+    if conversation_context:
+        system_prompt += f"\n\nConversation context:\n{conversation_context}"
     
     try:
         # Save current directory and change to hooks isolation directory
@@ -160,10 +137,11 @@ def enhance_with_claude(original_prompt, use_improv=False, conversation_context=
         os.chdir(hooks_claude_dir)
         
         # Run Claude in pipe mode with timeout, isolated from project sessions
+        # Use --append-to-system-prompt to add our enhancement instructions
         claude_path = os.path.expanduser('~/.claude/local/claude')
         result = subprocess.run(
-            [claude_path, '-p', '--model', model, '--add-dir', original_cwd],
-            input=enhancement_prompt,
+            [claude_path, '-p', '--model', model, '--add-dir', original_cwd, '--append-to-system-prompt', system_prompt],
+            input=original_prompt,  # The original prompt is the input
             capture_output=True,
             text=True,
             timeout=15
@@ -212,13 +190,15 @@ def main():
             print(json.dumps({}))
             return
         
-        # Check for improv: prefix
+        # Check for improv: prefix - early return if not present
         has_improv_prefix = user_prompt.lower().startswith('improv:')
-        if has_improv_prefix:
-            # Remove the prefix for processing
-            clean_prompt = user_prompt[7:].strip()
-        else:
-            clean_prompt = user_prompt
+        if not has_improv_prefix:
+            # Early return for normal prompts - bypass enhancement
+            print(json.dumps({}))
+            return
+            
+        # Remove the prefix for processing
+        clean_prompt = user_prompt[7:].strip()
         
         # Skip enhancement for very short prompts but still log them
         if len(clean_prompt) < 5:
@@ -247,22 +227,18 @@ def main():
         conversation_context = get_conversation_context(transcript_path)
         
         # Enhance the prompt with Claude
-        enhanced_prompt = enhance_with_claude(clean_prompt, use_improv=has_improv_prefix, conversation_context=conversation_context)
+        enhanced_prompt = enhance_with_claude(clean_prompt, conversation_context=conversation_context)
         
         if enhanced_prompt and enhanced_prompt != clean_prompt:
             # Save to history with enhancement
-            model_used = 'sonnet_improv' if has_improv_prefix else 'sonnet'
-            save_prompt_history(user_prompt, enhanced_prompt, model_used, has_improv_prefix)
+            save_prompt_history(user_prompt, enhanced_prompt, 'sonnet_v4_improv', True)
             
             # Add enhanced prompt as context instead of replacement
             print(f"\n[ENHANCED PROMPT]: {enhanced_prompt}")
         else:
             # Log even when no enhancement was made
-            model_used = 'sonnet_improv' if has_improv_prefix else 'sonnet'
             final_prompt = enhanced_prompt if enhanced_prompt else clean_prompt
-            save_prompt_history(user_prompt, final_prompt, f"{model_used}_no_change", has_improv_prefix)
-            
-            # No enhancement needed - no output
+            save_prompt_history(user_prompt, final_prompt, 'sonnet_v4_improv_no_change', True)
             
     except Exception as e:
         if DEBUG:

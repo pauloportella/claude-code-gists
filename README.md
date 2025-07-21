@@ -22,9 +22,9 @@ A collection of personal hooks for Claude Code. These are my personal Claude Cod
 
 ### User Prompt Submit Hooks
 
-- **user-prompt-hook.py** - Enhances user prompts for clarity and precision
-  - `improv:` prefix → Sonnet model for advanced prompt engineering with context analysis
-  - Normal prompts → Haiku model for quick improvements
+- **user-prompt-hook.py** - Advanced prompt engineering for Claude Code (improv: mode only)
+  - **ONLY processes prompts with `improv:` prefix** - normal prompts bypass hook to avoid lag
+  - Uses Claude Sonnet v4 with --append-to-system-prompt for enhancement
   - Adds enhanced prompts as context (doesn't replace original)
   - Includes conversation history for context-aware enhancements
   - Logs all interactions to `~/.claude/hooks-using-claude/prompt_history.json`
@@ -165,38 +165,39 @@ Features:
 - Falls back to allowing tasks if analysis fails
 
 ### user-prompt-hook.py
-**Contextual Pre-Thought Enhancement** - Transforms user prompts into intelligent guidance for Claude:
-- **improv: prefix** - Uses Claude 3.5 Sonnet for advanced prompt engineering with context analysis
-- **Normal prompts** - Uses Claude 3.5 Sonnet for contextual pre-thought intelligence
-- Acts as contextual intelligence layer rather than simple typo correction
-- Interprets user intent and provides actionable guidance to Claude
+**Advanced Prompt Engineering** - Enhances prompts with `improv:` prefix using Claude Sonnet v4:
+- **ONLY processes prompts starting with `improv:`** - all other prompts bypass the hook
+- Uses Claude Sonnet v4 with --append-to-system-prompt for intelligent enhancements
+- Applies Anthropic's prompt engineering best practices
+- Makes prompts more specific, clear, and actionable
 - Includes conversation history for context-aware enhancements
 
-**How It Works:**
-Instead of just fixing typos, this hook transforms brief commands into intelligent guidance:
+**Why improv-only mode?**
+- Eliminates lag for normal prompts
+- Gives users explicit control over when to use advanced enhancement
+- Allows quick commands without processing delay
 
-- `"commit and push"` → `"The user wants to commit and push changes. Check for unstaged files, review commit message consistency with project style, then execute git commit and push."`
-- `"fix the bug"` → `"The user needs debugging assistance. Ask for error messages, reproduction steps, and affected files before proposing solutions."`
-- `"test this"` → `"The user wants to run tests. Check for test files, identify the testing framework, and run appropriate test commands."`
+**How to use:**
+- `improv: help me fix the performance issue` → Enhanced with specific suggestions for profiling, benchmarking, and optimization
+- `improv: refactor this code` → Enhanced with questions about design patterns, target architecture, and specific refactoring goals
+- `improv: write tests` → Enhanced with test framework detection, coverage goals, and test strategy
 
 **Features:**
-- **Contextual Intelligence**: Interprets intent beyond literal words
-- **Pre-Thought Guidance**: Provides Claude with helpful context and suggested actions
-- **Technical Awareness**: Includes relevant technical considerations and best practices
-- **Conversation Context**: Uses transcript history for intelligent enhancements
+- **Advanced Prompt Engineering**: Uses Claude Sonnet v4 with system prompt injection
+- **Context-Aware**: Includes conversation history for better understanding
 - **Quality Evaluation**: 500-entry history with `"pass"` property for tracking enhancement quality
 - **Session Isolation**: Uses ~/.claude/hooks-using-claude to prevent conversation pollution
-- **Recursion Prevention**: Advanced pattern detection prevents infinite enhancement loops
+- **Zero-Lag Normal Mode**: Regular prompts bypass enhancement completely
 
 **Evaluation Tracking:**
 Each enhancement includes a `"pass"` property for quality assessment:
 ```json
 {
   "timestamp": "2025-07-21T01:09:43.490675",
-  "original_prompt": "commit and push",
-  "enhanced_prompt": "The user wants to commit and push changes...",
-  "model_used": "sonnet",
-  "had_improv_prefix": false,
+  "original_prompt": "improv: fix the bug",
+  "enhanced_prompt": "Debug the issue by first checking error logs...",
+  "model_used": "sonnet_v4_improv",
+  "had_improv_prefix": true,
   "pass": true  // Manual evaluation: true (good), false (bad), null (unevaluated)
 }
 ```
