@@ -33,11 +33,13 @@ This repository contains a collection of Python-based hooks for Claude Code that
 - **dependency-checker.py**: Checks for outdated dependencies in package.json, Cargo.toml, requirements.txt, pyproject.toml, and Python scripts with PEP 723 inline metadata
 
 ### User Prompt Submit Hooks
-- **user-prompt-hook.py**: Enhances user prompts for clarity and precision
-  - `improv:` prefix → Sonnet model for advanced prompt engineering
-  - Normal prompts → Haiku model for quick improvements
-  - Completely replaces original prompts with enhanced versions
-  - Logs enhancement history to `~/.claude/hooks-using-claude/prompt_history.json`
+- **user-prompt-hook.py**: Contextual Pre-Thought Enhancement system
+  - `improv:` prefix → Claude 3.5 Sonnet for advanced prompt engineering with context analysis
+  - Normal prompts → Claude 3.5 Sonnet for contextual pre-thought intelligence
+  - Transforms brief commands into intelligent guidance rather than simple typo fixes
+  - Interprets user intent and provides actionable guidance to Claude
+  - Includes conversation history for context-aware enhancements
+  - Logs enhancement history to `~/.claude/hooks-using-claude/prompt_history.json` with evaluation tracking
 
 ### Notification Hooks
 - **notification-handler.sh**: Handles system notifications for Claude Code events
@@ -49,15 +51,13 @@ This repository contains a collection of Python-based hooks for Claude Code that
 # Test individual hooks with sample input
 echo '{"tool": "Bash", "params": {"command": "rm -rf /"}}' | python3 hooks/command-safety-guard.py
 echo '{"tool": "Edit", "params": {"file_path": "/path/to/package.json", "content": "..."}}' | python3 hooks/dependency-checker.py
-echo '{"user_prompt": "improv: fix the bug"}' | python3 hooks/user-prompt-hook.py
-echo '{"user_prompt": "make this faster"}' | python3 hooks/user-prompt-hook.py
 
-# Test all hooks
-python3 hooks/command-safety-guard.py < test_input.json
-python3 hooks/dependency-checker.py < test_input.json
-python3 hooks/security-audit.py < test_input.json
-python3 hooks/task-quality-analyzer.py < test_input.json
-python3 hooks/user-prompt-hook.py < test_input.json
+# Test user-prompt-hook with correct payload format
+echo '{"session_id": "test123", "transcript_path": "/tmp/test", "cwd": "/tmp", "hook_event_name": "UserPromptSubmit", "prompt": "improv: fix the bug"}' | python3 hooks/user-prompt-hook.py
+echo '{"session_id": "test123", "transcript_path": "/tmp/test", "cwd": "/tmp", "hook_event_name": "UserPromptSubmit", "prompt": "commit and push"}' | python3 hooks/user-prompt-hook.py
+
+# Test with debug output enabled
+echo '{"session_id": "test123", "transcript_path": "/tmp/test", "cwd": "/tmp", "hook_event_name": "UserPromptSubmit", "prompt": "test prompt"}' | HOOK_DEBUG=true python3 hooks/user-prompt-hook.py
 
 # Make hooks executable
 chmod +x hooks/*.py
@@ -104,8 +104,7 @@ Reference configuration for `~/.claude/settings.json`:
     ],
     "UserPromptSubmit": [
       {
-        "matcher": "",
-        "hooks": [{"type": "command", "command": "~/.claude/hooks/user-prompt-hook.py"}]
+        "hooks": [{"type": "command", "command": "uv run --no-project ~/.claude/hooks/user-prompt-hook.py"}]
       }
     ],
     "Notification": [
@@ -131,7 +130,8 @@ Current checkers support:
 
 ## Hook Input/Output Protocol
 
-Hooks receive JSON on stdin with structure:
+### PreToolUse and PostToolUse Hooks
+Receive JSON on stdin with structure:
 ```json
 {
   "tool": "ToolName",
@@ -142,10 +142,23 @@ Hooks receive JSON on stdin with structure:
 }
 ```
 
-Hooks output:
+### UserPromptSubmit Hooks  
+Receive JSON on stdin with structure:
+```json
+{
+  "session_id": "abc123",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "cwd": "/current/working/directory",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "user's submitted prompt"
+}
+```
+
+### Hook Output
 - Exit code 0: Allow operation (optional warnings to stderr)
 - Exit code 2: Block operation (error message to stderr)
 - JSON response on stdout (optional)
+- UserPromptSubmit can add context by printing to stdout
 
 ## Key Implementation Details
 
@@ -165,7 +178,12 @@ Hooks output:
 5. **Pattern Matching**: Command safety uses regex patterns with careful boundary checks
 6. **Modularity**: Dependency checkers use dynamic imports to support easy extension
 7. **Python Support**: Handles requirements.txt, pyproject.toml, and PEP 723 inline script metadata
-8. **Prompt Enhancement**: UserPromptSubmit hook completely replaces user prompts with enhanced versions
+8. **Contextual Pre-Thought Enhancement**: UserPromptSubmit hook transforms user prompts into intelligent guidance
+   - Interprets user intent beyond literal words
+   - Provides actionable context and suggestions to Claude
+   - Uses Claude 3.5 Sonnet for both `improv:` and normal prompts
+   - Includes 500-entry history with `"pass"` property for quality evaluation
+   - Example: `"commit and push"` becomes contextual guidance about checking files and consistency
 
 ## Requirements and Best Practices
 
@@ -184,6 +202,24 @@ Hooks output:
 - Security audit validates file operations and path traversal attempts
 - All hooks use absolute paths to prevent path-based attacks
 - Hook outputs include package registry URLs for verification
+
+### User Prompt Enhancement Evaluation
+The user-prompt-hook maintains a history log at `~/.claude/hooks-using-claude/prompt_history.json` with evaluation tracking:
+
+```json
+{
+  "timestamp": "2025-07-21T01:09:43.490675",
+  "original_prompt": "commit and push",
+  "enhanced_prompt": "The user wants to commit and push changes...",
+  "model_used": "sonnet",
+  "had_improv_prefix": false,
+  "pass": null  // Manual evaluation: true (good), false (bad), null (unevaluated)
+}
+```
+
+- **History limit**: 500 entries (automatically managed)
+- **Evaluation tracking**: Set `"pass"` property manually for quality assessment
+- **Debugging**: Use `HOOK_DEBUG=true` environment variable for detailed output
 
 ## Git Commit Message Conventions
 
