@@ -165,22 +165,41 @@ Features:
 - Falls back to allowing tasks if analysis fails
 
 ### user-prompt-hook.py
-Enhances user prompts for clarity and precision using Claude:
-- **improv: prefix** - Uses Sonnet model for comprehensive prompt engineering
-- **Normal prompts** - Uses Haiku model for quick improvements
-- Includes conversation context from transcript for intelligent enhancements
-- Adds enhanced prompts as context (preserves original)
-- Logs all interactions to ~/.claude/hooks-using-claude/prompt_history.json
+**Contextual Pre-Thought Enhancement** - Transforms user prompts into intelligent guidance for Claude:
+- **improv: prefix** - Uses Claude 3.5 Sonnet for advanced prompt engineering with context analysis
+- **Normal prompts** - Uses Claude 3.5 Sonnet for contextual pre-thought intelligence
+- Acts as contextual intelligence layer rather than simple typo correction
+- Interprets user intent and provides actionable guidance to Claude
+- Includes conversation history for context-aware enhancements
 
-Features:
-- Context-aware prompt enhancement using conversation history
-- Advanced prompt engineering for code-related tasks:
-  - Adds file paths and technical specifications
-  - Requests error messages and logs for debugging
-  - Specifies output formats and requirements
-- Prevents recursion with internal enhancement detection
-- Maintains complete history for evaluation
-- Uses isolated Claude sessions to avoid session pollution
+**How It Works:**
+Instead of just fixing typos, this hook transforms brief commands into intelligent guidance:
+
+- `"commit and push"` → `"The user wants to commit and push changes. Check for unstaged files, review commit message consistency with project style, then execute git commit and push."`
+- `"fix the bug"` → `"The user needs debugging assistance. Ask for error messages, reproduction steps, and affected files before proposing solutions."`
+- `"test this"` → `"The user wants to run tests. Check for test files, identify the testing framework, and run appropriate test commands."`
+
+**Features:**
+- **Contextual Intelligence**: Interprets intent beyond literal words
+- **Pre-Thought Guidance**: Provides Claude with helpful context and suggested actions
+- **Technical Awareness**: Includes relevant technical considerations and best practices
+- **Conversation Context**: Uses transcript history for intelligent enhancements
+- **Quality Evaluation**: 500-entry history with `"pass"` property for tracking enhancement quality
+- **Session Isolation**: Uses ~/.claude/hooks-using-claude to prevent conversation pollution
+- **Recursion Prevention**: Advanced pattern detection prevents infinite enhancement loops
+
+**Evaluation Tracking:**
+Each enhancement includes a `"pass"` property for quality assessment:
+```json
+{
+  "timestamp": "2025-07-21T01:09:43.490675",
+  "original_prompt": "commit and push",
+  "enhanced_prompt": "The user wants to commit and push changes...",
+  "model_used": "sonnet",
+  "had_improv_prefix": false,
+  "pass": true  // Manual evaluation: true (good), false (bad), null (unevaluated)
+}
+```
 
 ## Contributing
 
