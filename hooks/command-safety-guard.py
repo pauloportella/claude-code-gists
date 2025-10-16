@@ -65,8 +65,15 @@ SYSTEM_SAFETY_RULES = [
      "🚫 DOCKER WIPE: This would delete all Docker data including volumes!"),
     
     # Search command restrictions
-    (r'\bfind\s+\S+\s+-name\b', 
+    (r'\bfind\s+\S+\s+-name\b',
      "🚫 Use 'rg --files -g pattern' or 'rg --files | rg pattern' instead of 'find -name' for better performance"),
+
+    # Heredoc syntax (incompatible with fish shell)
+    (r'(cat|tee)\s+>.*<<\s*["\']?EOF["\']?',
+     "🚫 FISH INCOMPATIBLE: Heredoc syntax (<<EOF) doesn't work in fish shell!\n"
+     "Alternative 1 (printf): printf '%s\\n' 'line1' 'line2' > file\n"
+     "Alternative 2 (echo -e): echo -e 'line1\\nline2' > file\n"
+     "Alternative 3 (ssh with bash): ssh host 'bash -c \"cat > file <<EOF\\ncontent\\nEOF\"'"),
 ]
 
 # Warning rules - provide guidance but don't block
