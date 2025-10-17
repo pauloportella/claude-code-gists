@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/security-audit.py"
+            "command": "uv run --no-project ~/.claude/hooks/security-audit.py"
           }
         ]
       },
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/command-safety-guard.py"
+            "command": "uv run --no-project ~/.claude/hooks/command-safety-guard.py"
           }
         ]
       },
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/task-quality-analyzer.py"
+            "command": "uv run --no-project ~/.claude/hooks/task-quality-analyzer.py"
           }
         ]
       }
@@ -62,7 +62,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/dependency-checker.py"
+            "command": "uv run --no-project ~/.claude/hooks/dependency-checker.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project ~/.claude/hooks/user-prompt-hook.py"
           }
         ]
       }
