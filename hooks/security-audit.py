@@ -8,8 +8,7 @@ import os
 
 # Sensitive paths to block completely
 BLOCKED_PATHS = [
-    # User secrets
-    '.ssh/',
+    # User secrets (note: .ssh/ removed - we block specific private keys instead)
     '.aws/',
     '.gnupg/',
     '.password-store/',
